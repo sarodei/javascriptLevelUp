@@ -1,0 +1,314 @@
+<html>
+<title>Covid-19 Dashboard</title>
+<head>
+  <script src="https://cdn.anychart.com/releases/v8/js/anychart-base.min.js"></script>
+  <script src="https://cdn.anychart.com/releases/v8/js/anychart-ui.min.js"></script>
+  <script src="https://cdn.anychart.com/releases/v8/js/anychart-exports.min.js"></script>
+  <link href="https://cdn.anychart.com/releases/v8/css/anychart-ui.min.css" type="text/css" rel="stylesheet">
+  <link href="https://cdn.anychart.com/releases/v8/fonts/css/anychart-font.min.css" type="text/css" rel="stylesheet">
+  <style type="text/css">
+	html, body { height: 100%; padding: 0; margin: 0; }
+	
+	div { position:fixed; width: 50%; height: 50%; float: left; } 
+	#globalStats { top:0;   left:0;   }
+	#countryStats { top:0;   left:50%; }
+	#countryLineStats { top:50%; left:0;   }
+	#countryTrendPrediction { top:50%; left:50%;  }  
+	
+	.anychart-credits {display: none !important;}
+    
+</style>
+</head>
+<body>
+  
+	<div id="globalStats"></div>
+	<div id="countryStats"></div>
+	<div id="countryLineStats"></div>
+	<div id="countryTrendPrediction"></div>  
+
+  <script>
+	const COUNTRY = 'India';
+	const YEAR=365;
+	const TREND_DAYS=50;
+	
+	function visualizeLineChart(dataSet, title, containerId){
+		var dataSet = anychart.data.set(dataSet);
+		// map data for the first series, take x from the zero column and value from the first column of data set
+		var firstSeriesData = dataSet.mapAs({ x: 0, value: 1 });
+		// map data for the second series, take x from the zero column and value from the second column of data set
+		var secondSeriesData = dataSet.mapAs({ x: 0, value: 2 });
+		// map data for the third series, take x from the zero column and value from the third column of data set
+		var thirdSeriesData = dataSet.mapAs({ x: 0, value: 3 });
+		// map data for the third series, take x from the zero column and value from the third column of data set
+		var forthSeriesData = dataSet.mapAs({ x: 0, value: 4 });
+		
+		// create line chart
+		var chart = anychart.line();
+
+		// turn on chart animation
+		chart.animation(true);
+
+		// set chart padding
+		chart.padding([10, 20, 5, 20]);
+
+		// turn on the crosshair
+		chart.crosshair().enabled(true).yLabel(false).yStroke(null);
+
+		// set tooltip mode to point
+		chart.tooltip().positionMode('point');
+
+		// set chart title text settings
+		chart.title(title);
+
+		// set yAxis title
+		chart.yAxis().title('Number of Cases');
+		chart.xAxis().title('Number of Days Since The Country Started monitoring Covid-19').labels().padding(5);
+
+		// create first series with mapped data
+		var firstSeries = chart.line(firstSeriesData);
+		  firstSeries.name('Confirmed');
+		  firstSeries.stroke('Blue');
+		  firstSeries.hovered().markers().enabled(true).type('circle').size(4);
+		  firstSeries
+			.tooltip()
+			.position('right')
+			.anchor('left-center')
+			.offsetX(5)
+			.offsetY(5);
+
+		  // create second series with mapped data
+		  var secondSeries = chart.line(secondSeriesData);
+		  secondSeries.name('Recovered');
+		  secondSeries.stroke('Green');
+		  secondSeries.hovered().markers().enabled(true).type('circle').size(4);
+		  secondSeries
+			.tooltip()
+			.position('right')
+			.anchor('left-center')
+			.offsetX(5)
+			.offsetY(5);
+
+		  // create third series with mapped data
+		  var thirdSeries = chart.line(thirdSeriesData);
+		  thirdSeries.name('Deaths');
+		  thirdSeries.stroke('Red');
+		  thirdSeries.hovered().markers().enabled(true).type('circle').size(4);
+		  thirdSeries
+			.tooltip()
+			.position('right')
+			.anchor('left-center')
+			.offsetX(5)
+			.offsetY(5);
+			
+		  // create forth series with mapped data
+		  var forthSeries = chart.line(forthSeriesData);
+		  forthSeries.name('Active');
+		  forthSeries.stroke('Turquoise');
+		  forthSeries.hovered().markers().enabled(true).type('circle').size(4);
+		  forthSeries
+			.tooltip()
+			.position('right')
+			.anchor('left-center')
+			.offsetX(5)
+			.offsetY(5);
+		  // turn the legend on
+		  chart.legend().enabled(true).fontSize(13).padding([0, 0, 10, 0]);
+
+		  // set container id for the chart
+		  chart.container(containerId);
+		  // initiate chart drawing
+		  chart.draw();
+	}
+	
+	function visualizePieChart(data, title ,containerId){
+		let chart = anychart.pie();
+		chart.data(data);
+		  // set chart title text settings
+		chart
+			.title(title)
+			// set chart radius
+			.radius('43%');
+			
+		chart.labels().position('outside');
+		  // set container id for the chart
+		chart.container(containerId);
+
+		  // initiate chart drawing
+		chart.draw();
+	}
+	
+	async function fetchStats(url= null){
+		try{
+			if(url==null){
+				throw 'URL cannot be null';
+			}
+			const data = await fetch(url)
+				.then((response) => {
+						return response.json();
+				});
+			return data;
+		}catch(e){
+			console.error('Error:'+e);
+			throw e;
+		}
+	}
+	
+	async function fetchGlobalStats(){
+		try{
+			 const globalStats = await fetchStats('https://api.covid19api.com/world/total');
+			 globalStats.TotalActive = globalStats.TotalConfirmed - globalStats.TotalDeaths - globalStats.TotalRecovered;
+			 return globalStats;
+		}catch(e){
+			console.error('Error:'+e);
+			throw e;
+		}
+	}
+	
+	async function fetchCountryStats(country= COUNTRY){
+		try{
+			 const countryStats = await fetchStats('https://api.covid19api.com/country/' + country);
+			 return countryStats;
+		}catch(e){
+			console.error('Error:'+e);
+			throw e;
+		}
+	}
+	
+	async function visualizeCountryTrendsChart(){
+		let country = COUNTRY;
+		let probableStats = await calculateAndPredictAfter1YearUsingRecentTrend(country);
+		let data = [
+			{x:'TotalActive', value: probableStats.probableActive},
+			{x:'TotalRecovered', value: probableStats.probableRecovered},
+			{x:'TotalDeaths', value: probableStats.probableDeaths, state:"selected"}
+		];
+		visualizePieChart(data, country +' predicted Corona Stats after 1 year', 'countryTrendPrediction');
+	}
+	
+	async function visualizeCountryChart(){
+		let country = COUNTRY;
+		let stats = await fetchCountryStats(country);
+		let latestStats = stats[stats.length - 1];
+		let data = [
+			{x:'TotalActive', value: latestStats.Active},
+			{x:'TotalRecovered', value: latestStats.Recovered},
+			{x:'TotalDeaths', value: latestStats.Deaths, state:"selected"}
+		];
+		visualizePieChart(data, country +' Corona Stats', 'countryStats');
+	}
+	
+	async function visualizeGlobalChart(){
+		let globalStats = await fetchGlobalStats();
+		
+		let data = [
+			{x:'TotalActive', value: globalStats.TotalActive},
+			{x:'TotalRecovered', value: globalStats.TotalRecovered},
+			{x:'TotalDeaths', value: globalStats.TotalDeaths, state:"selected"}
+		];
+		visualizePieChart(data, 'Live Global Corona Stats', 'globalStats');
+	}
+	
+	async function visualizeCountryChartInDetails(){
+		let country = COUNTRY;
+		let stats = await fetchCountryStats(country);
+		calcluatePerDayStats(stats);
+		let data = [];
+		for(let i=0; i< stats.length; i++){
+			data.push([i, stats[i].Confirmed, stats[i].Recovered, stats[i].Deaths, stats[i].Active]);
+		}
+		visualizeLineChart(data, country +' Detailed Corona Stats', 'countryLineStats');
+	}
+	
+	function calcluatePerDayStats(allStats){
+		let previousDayConfirmed = 0;
+		let previousDayDeath = 0;
+		let previousDayRecovered = 0;
+		for(let i=0; i < allStats.length; i++){
+			allStats[i].newCases = allStats[i].Confirmed - previousDayConfirmed;
+			previousDayConfirmed = allStats[i].Confirmed;	
+			allStats[i].newDeaths = allStats[i].Deaths - previousDayDeath;
+			previousDayDeath = allStats[i].Deaths;
+			allStats[i].newRecovered = allStats[i].Recovered - previousDayRecovered;
+			previousDayRecovered = allStats[i].Recovered;
+		}
+	}
+	
+	async function calculateAndPredictAfter1YearUsingRecentTrend(country){
+		//fetch stats
+		let allStats = await fetchCountryStats(country);
+		allStats.liveStats = allStats[allStats.length-1];
+		allStats.totalDays = allStats.length;
+		
+		//calulcate mean for all day data
+		allStats.confirmedMean = Math.floor(allStats.liveStats.Confirmed / allStats.totalDays);
+		allStats.deathMean = Math.floor(allStats.liveStats.Deaths / allStats.totalDays);
+		allStats.recoveredMean = Math.floor(allStats.liveStats.Recovered / allStats.totalDays);
+		
+		//calcluate cases per day
+		calcluatePerDayStats(allStats);
+		
+		//calcluate mean for last 100 day
+		let confirmedSumOfLastTrendDays = 0;
+		let deathSumOfLastTrendDays = 0;
+		let recoveredSumOfLastTrendDays = 0;
+		let activeSumOfLastTrendDays = 0;
+		for(let i=allStats.length-1; i > allStats.length-1-TREND_DAYS; i--){
+			confirmedSumOfLastTrendDays += allStats[i].newCases;
+			deathSumOfLastTrendDays += allStats[i].newDeaths;
+			recoveredSumOfLastTrendDays += allStats[i].newRecovered;
+			activeSumOfLastTrendDays += allStats[i].Active;
+		}
+		const confirmedMeanLastTrendDays = Math.floor(confirmedSumOfLastTrendDays / TREND_DAYS);
+		const deathMeanLastTrendDays = Math.floor(deathSumOfLastTrendDays / TREND_DAYS);
+		const recoveredMeanLastTrendDays = Math.floor(recoveredSumOfLastTrendDays / TREND_DAYS);
+		const activeMeanLastTrendDays = Math.floor(activeSumOfLastTrendDays / TREND_DAYS);
+		
+		//calcluate aggregate delta of each day with mean for last 100 days
+		let confirmedAggregateDelta=0;
+		let deathAggregateDelta=0;
+		let recoveredAggregateDelta=0;
+		let activeAggregateDelta=0;
+		for(let i=allStats.length-1; i > allStats.length-1-TREND_DAYS; i--){
+			confirmedAggregateDelta += (confirmedMeanLastTrendDays - allStats[i].newCases);
+			deathAggregateDelta     += (deathMeanLastTrendDays - allStats[i].newDeaths);
+			activeAggregateDelta    += (activeMeanLastTrendDays - allStats[i].Active);
+			recoveredAggregateDelta += (recoveredMeanLastTrendDays - allStats[i].newRecovered);
+		}
+		
+		
+		//predict after 1 year assuming the aggregateDelta as a recent trend in 100 days
+		let probableConfirmed = allStats.liveStats.Confirmed + (YEAR * (confirmedMeanLastTrendDays + confirmedAggregateDelta));
+		let probableDeaths = allStats.liveStats.Deaths + (YEAR * (deathMeanLastTrendDays + deathAggregateDelta));
+			
+		let probableRecovered = allStats.liveStats.Recovered + (YEAR * (recoveredMeanLastTrendDays + recoveredAggregateDelta));
+		let probableActive = 0;
+		if(probableRecovered <= (probableConfirmed-probableDeaths)){
+			probableActive = probableConfirmed - probableRecovered - probableDeaths;
+		}else{
+			probableActive = confirmedMeanLastTrendDays + confirmedAggregateDelta;
+			probableRecovered = probableConfirmed - probableActive - probableDeaths;
+		}
+			
+		
+		const probabableStats = {
+			'probableConfirmed' : probableConfirmed,
+			'probableDeaths' : probableDeaths,
+			'probableActive' : probableActive,
+			'probableRecovered' : probableRecovered
+		};
+
+		console.log(probabableStats);
+		return probabableStats;
+	}
+	
+    anychart.onDocumentReady(function () {
+	  
+		visualizeGlobalChart();
+		visualizeCountryChart();
+		visualizeCountryTrendsChart();
+		visualizeCountryChartInDetails();
+    });
+  
+</script>
+</body>
+</html>
